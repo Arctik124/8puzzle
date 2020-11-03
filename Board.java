@@ -5,7 +5,7 @@ import edu.princeton.cs.algs4.StdRandom;
 import java.util.Arrays;
 
 public class Board {
-    private final int[][] tiles;
+    private final int[] tiles;
     private final int n;
     private Board twin = null;
 
@@ -13,22 +13,20 @@ public class Board {
     // where tiles[row][col] = tile at (row, col)
     public Board(int[][] tiles) {
         n = tiles[0].length;
-        this.tiles = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                this.tiles[i][j] = tiles[i][j];
-            }
+        this.tiles = new int[n * n];
+        for (int i = 0; i < n * n; i++) {
+            this.tiles[i] = tiles[i / n][i % n];
         }
     }
 
-    // string representation of this board  
+    // string representation of this board
     public String toString() {
         StringBuilder s = new StringBuilder();
         s.append(n);
         for (int i = 0; i < n; i++) {
             s.append("\n");
             for (int j = 0; j < n; j++) {
-                s.append(tiles[i][j] + " ");
+                s.append(tiles[i * n + j] + " ");
             }
         }
         return s.toString();
@@ -42,20 +40,12 @@ public class Board {
     // number of tiles out of place
     public int hamming() {
         int ham = 0;
-        boolean check;
-        int[] pos;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (tiles[i][j] == 0) {
-                    continue;
-                }
-                pos = findPos(tiles[i][j]);
-                check = (pos[0] == i && pos[1] == j);
-                if (!check) {
-                    ham++;
-                }
+        int pos;
 
-            }
+        for (int i = 0; i < n * n; i++) {
+            if (tiles[i] == 0) continue;
+            pos = findPos(tiles[i]);
+            if (pos != i) ham++;
         }
         return ham;
     }
@@ -64,36 +54,22 @@ public class Board {
     // sum of Manhattan distances between tiles and goal
     public int manhattan() {
         int man = 0;
-        boolean check;
-        int[] pos;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (tiles[i][j] == 0) {
-                    continue;
-                }
-                pos = findPos(tiles[i][j]);
-                check = (pos[0] == i && pos[1] == j);
-                if (!check) {
-                    man += Math.abs(i - pos[0]) + Math.abs(j - pos[1]);
-                }
+        int pos;
 
-            }
+        for (int i = 0; i < n * n; i++) {
+            if (tiles[i] == 0) continue;
+            pos = findPos(tiles[i]);
+            if (pos != i)
+                man += Math.abs(i / n - pos / n) + Math.abs(i % n - pos % n);
         }
 
         return man;
     }
 
-    private int[] findPos(int i) {
-        int[] pos = new int[2];
-        if (i == 0) {
-            pos[0] = n - 1;
-            pos[1] = n - 1;
-        }
-        else {
-            i--;
-            pos[0] = i / n;
-            pos[1] = i % n;
-        }
+    private int findPos(int i) {
+        int pos;
+        if (i == 0) pos = n * n - 1;
+        else pos = i - 1;
         return pos;
     }
 
@@ -109,142 +85,73 @@ public class Board {
         if (y == null) return false;
         if (y.getClass() != this.getClass()) return false;
         Board that = (Board) y;
-        return (Arrays.deepEquals(this.tiles, that.tiles)) && (this.n == that.n);
+        return (Arrays.equals(this.tiles, that.tiles)) && (this.n == that.n);
     }
 
     // all neighboring boards
     public Iterable<Board> neighbors() {
-        int[] pos0 = new int[2];
-        outer:
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (tiles[i][j] == 0) {
-                    pos0[0] = i;
-                    pos0[1] = j;
-                    break outer;
-                }
+        int pos0 = 0;
+        for (int i = 0; i < n * n; i++) {
+            if (tiles[i] == 0) {
+                pos0 = i;
+                break;
             }
         }
+
         Stack<Board> stack = new Stack<>();
-        int[] neighbour = new int[2];
-        if (pos0[0] - 1 >= 0) {
-            neighbour[0] = pos0[0] - 1;
-            neighbour[1] = pos0[1];
+        int neighbour;
+        if (pos0 / n - 1 >= 0) {
+            neighbour = pos0 - n;
             stack.push(new Board(exch(neighbour, pos0)));
         }
-        if (pos0[0] + 1 < n) {
-            neighbour[0] = pos0[0] + 1;
-            neighbour[1] = pos0[1];
+        if (pos0 / n + 1 < n) {
+            neighbour = pos0 + n;
             stack.push(new Board(exch(neighbour, pos0)));
         }
-        if (pos0[1] - 1 >= 0) {
-            neighbour[0] = pos0[0];
-            neighbour[1] = pos0[1] - 1;
+        if (pos0 % n - 1 >= 0) {
+            neighbour = pos0 - 1;
             stack.push(new Board(exch(neighbour, pos0)));
         }
-        if (pos0[1] + 1 < n) {
-            neighbour[0] = pos0[0];
-            neighbour[1] = pos0[1] + 1;
+        if (pos0 % n + 1 < n) {
+            neighbour = pos0 + 1;
             stack.push(new Board(exch(neighbour, pos0)));
         }
         return stack;
     }
 
-    private int[][] exch(int[] a, int[] b) {
-        int[][] copy = new int[n][n];
+    private int[][] exch(int a, int b) {
+        int[] copy = new int[n * n];
+        int[][] copy2d = new int[n][n];
+        for (int i = 0; i < n * n; i++) {
+            copy[i] = tiles[i];
+        }
+        int temp = copy[a];
+        copy[a] = copy[b];
+        copy[b] = temp;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
-                copy[i][j] = tiles[i][j];
+                copy2d[i][j] = copy[i * n + j];
             }
         }
-        int temp = copy[a[0]][a[1]];
-        copy[a[0]][a[1]] = copy[b[0]][b[1]];
-        copy[b[0]][b[1]] = temp;
-        return copy;
+        return copy2d;
     }
 
     // a board that is obtained by exchanging any pair of tiles
     public Board twin() {
         if (twin == null) {
-            int[] pos1 = new int[2];
-            int[] pos2 = new int[2];
+            int pos1;
+            int pos2;
+            do {
+                pos1 = StdRandom.uniform(n * n);
+            } while (tiles[pos1] == 0);
 
             do {
-                pos1[0] = StdRandom.uniform(n);
-                pos1[1] = StdRandom.uniform(n);
-            } while (tiles[pos1[0]][pos1[1]] == 0);
-
-
-            do {
-                pos2[0] = StdRandom.uniform(n);
-                pos2[1] = StdRandom.uniform(n);
-            } while (tiles[pos2[0]][pos2[1]] == 0
-                    || tiles[pos2[0]][pos2[1]] == tiles[pos1[0]][pos1[1]]);
+                pos2 = StdRandom.uniform(n * n);
+            } while (tiles[pos2] == 0 || tiles[pos2] == tiles[pos1]);
             twin = new Board(exch(pos1, pos2));
         }
 
         return twin;
-        //
-        // while (true) {
-        //     int sw = StdRandom.uniform(4);
-        //     int[] pos2 = pos1.clone();
-        //     switch (sw) {
-        //         case 0:
-        //             if (pos1[0] - 1 >= 0) {
-        //                 pos2[0] = pos1[0] - 1;
-        //                 pos2[1] = pos1[1];
-        //                 if (tiles[pos2[0]][pos2[1]] != 0)
-        //                     return new Board(exch(pos1, pos2));
-        //             }
-        //             break;
-        //         case 1:
-        //             if (pos1[0] + 1 < n) {
-        //                 pos2[0] = pos1[0] + 1;
-        //                 pos2[1] = pos1[1];
-        //                 if (tiles[pos2[0]][pos2[1]] != 0)
-        //                     return new Board(exch(pos1, pos2));
-        //             }
-        //             break;
-        //         case 2:
-        //             if (pos1[1] - 1 >= 0) {
-        //                 pos2[0] = pos1[0];
-        //                 pos2[1] = pos1[1] - 1;
-        //                 if (tiles[pos2[0]][pos2[1]] != 0)
-        //                     return new Board(exch(pos1, pos2));
-        //             }
-        //             break;
-        //         case 3:
-        //             if (pos1[1] + 1 < n) {
-        //                 pos2[0] = pos1[0];
-        //                 pos2[1] = pos1[1] + 1;
-        //                 if (tiles[pos2[0]][pos2[1]] != 0)
-        //                     return new Board(exch(pos1, pos2));
-        //             }
-        //             break;
-        //         default:
-        //             break;
-        //     }
-        // if (pos1[0] - 1 >= 0 && sw == 0) {
-        //     pos2[0] = pos1[0] - 1;
-        //     pos2[1] = pos1[1];
-        //     return new Board(exch(pos1, pos2));
-        // }
-        // if (pos1[0] + 1 < n && sw == 2) {
-        //     pos2[0] = pos1[0] + 1;
-        //     pos2[1] = pos1[1];
-        //     return new Board(exch(pos1, pos2));
-        // }
-        // if (pos1[1] - 1 >= 0 && sw == 3) {
-        //     pos2[0] = pos1[0];
-        //     pos2[1] = pos1[1] - 1;
-        //     return new Board(exch(pos1, pos2));
-        // }
-        // if (pos1[1] + 1 < n && sw == 1) {
-        //     pos2[0] = pos1[0];
-        //     pos2[1] = pos1[1] + 1;
-        //     return new Board(exch(pos1, pos2));
-        // }
-        // }
     }
 
     // unit testing (not graded)
@@ -261,17 +168,17 @@ public class Board {
 
         Board b = new Board(tiles);
         System.out.println(b);
-        // System.out.println("Ham: " + b.hamming());
-        // System.out.println("Man: " + b.manhattan());
-        // System.out.println(b.isGoal());
-        // System.out.println("Neig: ");
-        // for (Board b1 : b.neighbors()) {
-        //     System.out.println(b1);
-        // }
+        System.out.println("Ham: " + b.hamming());
+        System.out.println("Man: " + b.manhattan());
+        System.out.println(b.isGoal());
+        System.out.println("Neig: ");
+        for (Board b1 : b.neighbors()) {
+            System.out.println(b1);
+        }
         System.out.println("Twin:");
         System.out.println(b.twin());
-        System.out.println(b.twin());
-        System.out.println(b.twin());
+        // System.out.println(b.twin());
+        // System.out.println(b.twin());
     }
 
 }
